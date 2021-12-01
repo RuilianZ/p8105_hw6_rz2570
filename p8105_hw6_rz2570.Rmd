@@ -12,7 +12,7 @@ library(tidyverse)
 
 ## Problem 1
 
-```{r}
+```{r import data}
 birth_df = read_csv("data/birthweight.csv") %>% 
   mutate(
     babysex = factor(babysex),
@@ -21,9 +21,22 @@ birth_df = read_csv("data/birthweight.csv") %>%
     mrace = factor(mrace)
     )
 
-#is.na(birth_df)
+ 
+birth_df %>% 
+  summarize_all(~ sum(is.na(.))) %>% 
+  knitr::kable()
 ```
 
+* Convert some numeric data to factor for regression analysis.  
+* The table above shows that there are no missing values in the data.  
+
+```{r regression model}
+fit = lm(bwt ~ blength, data = birth_df) 
+
+fit %>% 
+  broom::tidy() %>% 
+  knitr::kable(digits = 3)
+```
 
  
 ## Problem 2
