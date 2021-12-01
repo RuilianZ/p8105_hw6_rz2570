@@ -7,6 +7,8 @@ output: github_document
 
 ```{r}
 library(tidyverse)
+library(modelr)
+library(mgcv)
 
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
@@ -32,20 +34,42 @@ birth_df %>%
 * Convert some numeric data to factor for regression analysis.  
 * The table above shows that there are no missing values in the data.  
 
-```{r regression model}
-fit = lm(bwt ~ blength, data = birth_df) 
+```{r build a regression model}
+birth_df %>% 
+  ggplot(aes(x = blength, y = bwt)) +
+  geom_point() +
+  labs(
+    title = "Baby's birth weight against birth length",
+    x = "Birth length",
+    y = "Birth weight",
+    subtitle = "A"
+  )
+
+fit = lm(bwt ~ blength, data = birth_df)
 
 fit %>% 
   broom::tidy() %>% 
   knitr::kable(digits = 3)
 
 birth_df %>% 
-  select(bwt, blength) %>% 
-  modelr::add_residuals(fit) %>% 
-  modelr::add_predictions(fit) %>% 
-  ggplot(aes(x = resid, y = pred)) +
-  geom_point()
+  modelr::add_residuals(., fit) %>% 
+  modelr::add_predictions(., fit) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = .3) +
+  labs(
+    title = "Model residuals against fitted values",
+    x = "Predictions",
+    y = "Residuals",
+    subtitle = "B"
+  )
 ```
+
+* Modeling process: 
+  + After searching online, it seems that birth length has an association with birth weight, and birth length is used as the predictor of birth weight in some research.  
+  + From plot A, we can find that baby's length at birth might have an linear association with baby's birth weight. So `blength` can be chosen as the predictor of the first linear model.  
+  + A linear model was fitted, using `blength` as the predictor and `bwt` as the outcome.  
+  + We can see from the statistic and p-value of the table above that the model is statistically significant.  
+* Describe plot B: The plot shows the predicted values against the residuals of the model, in which the residuals are centered around 0 for most predictions ranging from 2000-4000. For predictions below 2000 and over 4000, there are some extreme outliers of residuals and the distribution of the residual gets skewed, which indicates this linear model might not be optimal for birth weight values under 2000 and over 4000.  
 
 ```{r compare models}
 fit1 = lm(bwt ~ blength + gaweeks, data = birth_df)
