@@ -7,6 +7,8 @@ output: github_document
 
 ```{r}
 library(tidyverse)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
 
 
@@ -34,6 +36,27 @@ birth_df %>%
 fit = lm(bwt ~ blength, data = birth_df) 
 
 fit %>% 
+  broom::tidy() %>% 
+  knitr::kable(digits = 3)
+
+birth_df %>% 
+  select(bwt, blength) %>% 
+  modelr::add_residuals(fit) %>% 
+  modelr::add_predictions(fit) %>% 
+  ggplot(aes(x = resid, y = pred)) +
+  geom_point()
+```
+
+```{r compare models}
+fit1 = lm(bwt ~ blength + gaweeks, data = birth_df)
+
+fit1 %>% 
+  broom::tidy() %>% 
+  knitr::kable(digits = 3)
+
+fit2 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = birth_df)
+
+fit2 %>% 
   broom::tidy() %>% 
   knitr::kable(digits = 3)
 ```
