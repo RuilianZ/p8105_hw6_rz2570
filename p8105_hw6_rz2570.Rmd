@@ -11,6 +11,8 @@ library(modelr)
 library(mgcv)
 
 theme_set(theme_minimal() + theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5)))
+
+set.seed(1)
 ```
 
 
@@ -35,15 +37,18 @@ birth_df %>%
 * The table above shows that there are no missing values in the data.  
 
 ```{r build a regression model}
-birth_df %>% 
-  ggplot(aes(x = blength, y = bwt)) +
-  geom_point() +
-  labs(
-    title = "Baby's birth weight against birth length",
-    x = "Birth length",
-    y = "Birth weight",
-    subtitle = "A"
-  )
+plot_a = 
+  birth_df %>% 
+    ggplot(aes(x = blength, y = bwt)) +
+    geom_point() +
+    labs(
+      title = "Baby's birth weight against birth length",
+      x = "Birth length",
+      y = "Birth weight",
+      subtitle = "A"
+    )
+
+plot_a
 
 fit = lm(bwt ~ blength, data = birth_df)
 
@@ -51,17 +56,20 @@ fit %>%
   broom::tidy() %>% 
   knitr::kable(digits = 3)
 
-birth_df %>% 
-  modelr::add_residuals(., fit) %>% 
-  modelr::add_predictions(., fit) %>% 
-  ggplot(aes(x = pred, y = resid)) +
-  geom_point(alpha = .3) +
-  labs(
-    title = "Model residuals against fitted values",
-    x = "Predictions",
-    y = "Residuals",
-    subtitle = "B"
-  )
+plot_b = 
+  birth_df %>% 
+    modelr::add_residuals(., fit) %>% 
+    modelr::add_predictions(., fit) %>% 
+    ggplot(aes(x = pred, y = resid)) +
+    geom_point(alpha = .3) +
+    labs(
+      title = "Model residuals against fitted values",
+      x = "Predictions",
+      y = "Residuals",
+      subtitle = "B"
+    )
+
+plot_b
 ```
 
 * Modeling process: 
@@ -85,35 +93,44 @@ fit2 %>%
   knitr::kable(digits = 3)
 ```
 
+* The output table of `fit1` shows that the model is statistically significant for both `blength` and `gaweeks` as predictors.  
+* The output table of `fit2` shows that the standard error of `babysex` is large, and the p-value of the coefficient of `bhead` interacting with `blength` is not significant, which indicates they might not be good predictors of the model.
+
 ```{r compare models}
-cv_df = crossv_mc(birth_df, 10) %>% 
+cv_df = crossv_mc(birth_df, 100) %>% 
   mutate(
-    mod1 = map(train, ~lm(bwt ~ blength, data = .x)),
-    mod2 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
-    mod3 = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = .x))) %>% 
+    model_1 = map(train, ~lm(bwt ~ blength, data = .x)),
+    model_2 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    model_3 = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = .x))) %>% 
   mutate(
-    rmse_mod1 = map2_dbl(mod1, test, ~rmse(model = .x, data = .y)),
-    rmse_mod2 = map2_dbl(mod2, test, ~rmse(model = .x, data = .y)),
-    rmse_mod3 = map2_dbl(mod2, test, ~rmse(model = .x, data = .y))
+    rmse_model_1 = map2_dbl(model_1, test, ~rmse(model = .x, data = .y)),
+    rmse_model_2 = map2_dbl(model_2, test, ~rmse(model = .x, data = .y)),
+    rmse_model_3 = map2_dbl(model_3, test, ~rmse(model = .x, data = .y))
   )
 
-cv_df %>% 
-  select(starts_with("rmse")) %>% 
-  pivot_longer(
-    everything(),
-    names_to = "model",
-    values_to = "rmse",
-    names_prefix = "rmse_") %>% 
-  mutate(model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) +
-  geom_violin() +
-  labs(
-    title = "Distribution of root mean squared errors for each model",
-    x = "Model",
-    y = "Root mean squared errors"
-  )
+plot_c = 
+  cv_df %>% 
+    select(starts_with("rmse")) %>% 
+    pivot_longer(
+      everything(),
+      names_to = "model",
+      values_to = "rmse",
+      names_prefix = "rmse_") %>% 
+    mutate(model = fct_inorder(model)) %>% 
+    ggplot(aes(x = model, y = rmse)) +
+    geom_violin() +
+    labs(
+      title = "Distribution of root mean squared errors for each model",
+      x = "Model",
+      y = "Root mean squared errors",
+      subtitle = "C"
+    )
+
+plot_c
 ```
 
+* Plot C shows that model 1 has the largest rmse, and model 3 has much more smaller rmse than model 1 and 2. Also, the distribution of rmse in model 3 is more centered than the other two models.  
+* These indicate that model 3 (uses head circumference, length, sex, and all interaction as predictors) predicts baby's birth weight the best among three models.
 
  
 ## Problem 2
