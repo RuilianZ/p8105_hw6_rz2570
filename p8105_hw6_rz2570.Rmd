@@ -135,7 +135,7 @@ plot_c
  
 ## Problem 2
 
-```{r}
+```{r load Central Prak data}
 weather_df = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728"),
@@ -147,5 +147,43 @@ weather_df =
     tmin = tmin / 10,
     tmax = tmax / 10) %>%
   select(name, id, everything())
+```
+
+```{r bootstrapping}
+weather_results_rsq = 
+  weather_df %>% 
+    bootstrap(n = 5000, id = "strap_number") %>%
+    mutate(
+      models = map(strap, ~ lm(tmax ~ tmin, data = .x)), 
+      results = map(models, broom::glance)) %>% 
+    select(strap_number, results) %>% 
+    unnest(results) %>% 
+    summarize(
+      rsq_lower = quantile(r.squared, 0.025),
+      rsq_upper = quantile(r.squared, 0.975)
+    )
+
+weather_results_rsq
+
+weather_results_beta = 
+  weather_df %>% 
+    bootstrap(n = 100, id = "strap_number") %>% # 5000
+    mutate(
+      models = map(strap, ~ lm(tmax ~ tmin, data = .x)), 
+      results = map(models, broom::tidy)) %>% 
+    select(strap_number, results) %>% 
+    unnest(results) %>% 
+    select(strap_number, term, estimate) %>% 
+    pivot_wider(
+      names_from = term,
+      values_from = estimate
+    ) %>% 
+  rename( "intercept" = "(Intercept)") %>% 
+  mutate(
+    product = intercept * tmin,
+    log_product = log(product)
+  )
+
+weather_results_beta
 ```
 
